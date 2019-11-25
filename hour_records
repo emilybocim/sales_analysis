@@ -1,0 +1,65 @@
+#Load the Pandas libraries with alias 'pd'.
+import pandas as pd
+
+#Read data from file 'filename.csv'
+data = pd.read_csv('C:/Users/eboci_000/Desktop/Sales Activity/all_sales_2019.csv')
+
+#Convert Time Format
+data=data.replace('6:00 - 6:59 AM','6')
+data=data.replace('7:00 - 7:59 AM','7')
+data=data.replace('8:00 - 8:59 AM','8')
+data=data.replace('9:00 - 9:59 AM','9')
+data=data.replace('10:00 - 10:59 AM','10')
+data=data.replace('11:00 - 11:59 AM','11')
+data=data.replace('12:00 - 12:59 PM','12')
+data=data.replace('1:00 - 1:59 PM','13')
+data=data.replace('2:00 - 2:59 PM','14')
+data=data.replace('3:00 - 3:59 PM','15')
+data=data.replace('4:00 - 4:59 PM','16')
+data=data.replace('5:00 - 5:59 PM','17')
+data=data.replace('6:00 - 6:59 PM','18')
+data=data.replace('7:00 - 7:59 PM','19')
+data=data.replace('8:00 - 8:59 PM','20')
+data=data.replace('9:00 - 9:59 PM','21')
+data=data.replace('10:00 - 10:59 PM','22')
+data=data.replace('11:00 - 11:59 PM','23')
+
+#Convert Time from string to number
+data['Time']=data['Time'].astype(int)
+
+#Drive Thru Subset
+dt_filter_list = ['DRIVE THRU', 'M-DRIVE-THRU']
+dt = data[data.Destination.isin(dt_filter_list)]
+
+#Drive Thru Hourly Car Records
+dt_count = dt.groupby(['Date','Time'],as_index=False)['Count'].sum()
+dt_count_max = dt_count.groupby(['Time'])['Count'].max()
+
+#Drive Thru Hourly Sales Records
+dt_sales = dt.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
+dt_sales_max = dt_sales.groupby(['Time'])['Net Sales'].max()
+
+#Dine Subset
+dine_filter_list = ['DINE IN','M-DINEIN']
+dine = data[data.Destination.isin(dine_filter_list)]
+
+#Dine Hourly Sales Records
+dine_sales = dine.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
+dine_sales_max = dine_sales.groupby(['Time'])['Net Sales'].max()
+
+#Overall Hour Records - No Catering (Catering creates inconsistencies from them
+#being pushed through at times other than when they went out.)
+overall_filter_list=['CARRY OUT', 'DRIVE THRU', 'DINE IN', 'M-CARRYOUT', 'M-DRIVE-THRU','M-DINEIN', 'M-OUTSIDE','ON DEMAND']
+overall=data[data.Destination.isin(overall_filter_list)]
+overall_sales=overall.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
+overall_sales_max=overall_sales.groupby(['Time'])['Net Sales'].max()
+
+#Overall Hour Records With Catering
+total=data.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
+total_max=total.groupby(['Time'])['Net Sales'].max()
+
+#Combine all records into one set.
+all_records=pd.concat([dine_sales_max,dt_count_max,dt_sales_max,overall_sales_max,total_max], axis=1).reset_index()
+
+#Create unique column names in all_records
+all_records.columns=['Time','Dine','Car Count', 'DT Sales', 'Overall (No Catering)', 'Overall']
