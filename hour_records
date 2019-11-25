@@ -2,7 +2,7 @@
 import pandas as pd
 
 #Read data from file 'filename.csv'
-data = pd.read_csv('C:/Users/eboci_000/Desktop/Sales Activity/all_sales_2019.csv')
+data = pd.read_csv('filename.csv')
 
 #Convert Time Format
 data=data.replace('6:00 - 6:59 AM','6')
