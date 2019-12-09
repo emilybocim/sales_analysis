@@ -1,0 +1,29 @@
+#Using RStudio
+
+#Import file using format hs <- read.csv("FILE_LOCATION.csv") where hs is hourly sales
+
+#Load Packages
+library(lubridate)
+library(dplyr)
+library(tidyr)
+
+#Convert the variable 'Time_of_Day' to mdy format. Then create variables for 'Month', 'Weekday' and 'Year'.
+hs$Time_of_Day <- mdy(hs$Time_of_Day)
+hs$Month <- month(hs$Time_of_Day)
+hs$Weekday <- weekdays(hs$Time_of_Day)
+hs$Year <- year(hs$Time_of_Day)
+
+#Filter to past month, sum by 'Year', 'Hour', and 'Weekday'. 
+pm <- hs %>%
+filter(Month < 12) %>%
+group_by(Year, Hour, Weekday) %>%
+summarise (sos = sum(Sales))
+
+#Spread the data by 'Year' and then create a new variable 'Growth'.
+pm <- spread(pm, Year, sos)
+pm$Growth <- pm$'2019'/pm$'2018' - 1
+
+#Create a table of 'Growth' by 'Hour' and 'Weekday'.
+Current_Growth <- pm [ , -c(3:4)]
+Current_Growth <- spread (Current_Growth, Weekday, Growth)
+Current_Growth <- Current_Growth [ , c(1,3,6,7,5,2,4)]
