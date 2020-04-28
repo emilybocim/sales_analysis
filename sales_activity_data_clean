@@ -1,0 +1,59 @@
+#Load Packages
+import pandas as pd
+import numpy as np
+import csv
+
+# Change file to online location once notebook is functional
+data = pd.read_csv(r"C:\Users\eboci_000\Desktop\Sales Activity\Sales\new_sales_4_25_2020.csv", header=0)
+data.head()
+
+# Delete empty columns
+data.drop(['Source.Name' , 'Sales Activity Report', 'Column3' , 'Column5' , 'Column6' , 'Column7' , 'Column8' , 'Column10' , 'Column11' , 'Column12' , 'Column14' , 'Column16' , 'Column17' , 'Column18' , 'Column19' , 'Column20' , 'Column21' , 'Column22' , 'Column23', 'Column24' ], axis=1, inplace=True)
+data.head()
+
+# Change Headers
+data.columns = ['Time', 'Destination','Count','Net Sales', 'Check Average']
+data.head()
+
+# Extract dates from the 'Hour' column and copy to the 'Date' column
+data['Date'] = data['Time'].str.extract(r"(\d{1,2}[/]\d{1,2}[/]\d{4})") 
+data.head()
+
+# Copy the date down until a new date occurs
+data['Date'] = data['Date'].fillna(method='ffill')
+data.head()
+
+# Delete empty rows and rows containing strings using the 'Count' column.
+data.dropna(subset=['Count'],inplace=True)
+data = data[data.Count != 'Count']
+data.head()
+
+# Copy the hour until a new hour occurs
+data['Time'] = data['Time'].fillna(method='ffill')
+data.head()
+
+# Make all destination vaiables single row names
+
+data['Destination'] = data['Destination'].astype(str)
+data['Destination'] = data['Destination'].replace('M-','M-CARRYOUT')
+data['Destination'] = data['Destination'].replace('M-DRIVE-','M-DRIVE-THRU')
+
+
+#Remove rows with 'Sub Total'
+
+data = data[data.Destination != 'Sub Total']
+
+data.head(10)
+
+# Combine new data with old data
+    # Must not have a file already named this or there will be an error
+    
+# Load previous data
+old_data = pd.read_csv(r"C:/Users/eboci_000/Desktop/Sales Activity/Sales/all_sales_4_18_2020.csv", header=0)
+
+# Vertical Concatenation
+current_sales_activity = pd.concat([old_data, data], axis=0)
+current_sales_activity.head()
+
+# Save the data with a filename that includes the last date of data added
+current_sales_activity.to_csv('C:/Users/eboci_000/Desktop/Sales Activity/Sales/all_sales_4_25_2020.csv', index=False)
