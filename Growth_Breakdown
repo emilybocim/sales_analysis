@@ -1,0 +1,88 @@
+#ONLY LINES THAT REQUIRE CHANGE ARE 4,7,10, AND 13. (Unless file locations changes, then line 21.)
+
+#Date of current version of all_sales using format 'mm_dd_yyyy'
+dcv = '08_01_2020'
+
+# Past year format yyyy
+py = 2019
+
+#Current year format yyyy
+cy = 2020
+
+#Current month in number format
+cm = 8
+
+#Load packages
+import pandas as pd
+import numpy as np
+import csv
+
+#Current revision file location
+crfl = r'C:\Users\eboci_000\Desktop\Sales Activity\Sales\all_sales_'
+
+#Last revision file type
+crft = '.csv'
+#Last revision file name
+crfn = crfl + dcv + crft
+#Load data
+data = pd.read_csv(crfn, header=0)
+
+#Convert 'Date' to date time format.
+data['Date'] = pd.to_datetime(data['Date'])
+
+#Create column for day of the week.
+data['Weekday'] = data['Date'].dt.day_name()
+#Create a column for month
+data['Month'] = data['Date'].dt.month
+#Create column for year
+data['Year'] = data['Date'].dt.year
+
+#Remove non-operational hours
+op = (data['Time'] > 5) & (data['Time'] < 22)
+data_op = data[op]
+
+#Filter to only include months January through past month.
+pm = data_op['Month'] < cm
+data_pm = data_op[pm]
+data_pm.head()
+
+#Keep only the needed columns
+data_cut = data_pm.drop(['Destination','Count','Check Average','Date','Month'], axis=1, inplace=False)
+
+#Remove Sunday (Why are there even sales on Sunday? oO)
+data_cut['Weekday']=data_cut['Weekday'].astype(str)
+data_sunday = data_cut[~data_cut.Weekday.str.contains("Sunday")]
+
+#Group by year, time, and weekday
+dg = data_sunday.groupby(['Year','Time','Weekday'],as_index=False).sum()
+dg.reset_index(drop=True, inplace=True)
+dgsi = dg.set_index(['Time','Weekday','Year'])
+dgun = dgsi.unstack(['Year'])
+
+#Created the calculate growth column
+dcalc = dgun
+dcalc['Growth'] = dcalc[('Net Sales', cy)]/dcalc[('Net Sales', py)]-1
+by_hour_and_weekday = dcalc.unstack('Weekday')
+
+#Keep only columns associated with growth.
+bhaw = by_hour_and_weekday.drop([('Net Sales', py, 'Monday'),('Net Sales', py, 'Tuesday'),('Net Sales', py, 'Wednesday'),
+                          ('Net Sales', py, 'Thursday'),('Net Sales', py, 'Friday'),('Net Sales', py, 'Saturday'),
+                          ('Net Sales', cy, 'Monday'),('Net Sales', cy, 'Tuesday'),('Net Sales', cy, 'Wednesday'),
+                          ('Net Sales', cy, 'Thursday'),('Net Sales', cy, 'Friday'),('Net Sales', cy, 'Saturday')],
+                               axis=1, inplace=False)
+#Reorder columns by weekday.
+cols = [('Growth','','Monday'),('Growth','','Tuesday'),('Growth','','Wednesday'),
+        ('Growth','','Thursday'),('Growth','','Friday'),('Growth','','Saturday'),]
+bhaw = bhaw[cols]
+
+bhaw.style.background_gradient()
+
+#Save Vesion of Growth Table
+#File location
+gfl = r'C:\Users\eboci_000\Desktop\Sales Activity\Sales\growth_'
+#Last revision file type
+gft = '.csv'
+#Last revision file name
+gfn = gfl + dcv + gft
+#Save bhaw to csv
+bhaw.to_csv(gfn, index=True)
