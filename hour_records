@@ -1,31 +1,25 @@
-#Load the Pandas libraries with alias 'pd'.
+#Inputs
+#Current date for all_sales revision
+crd = '08_01_2020'
+
+#Load packages
 import pandas as pd
+import numpy as np
+import csv
+import seaborn as sns
 
-#Read data from file 'filename.csv'
-data = pd.read_csv('filename.csv')
+#Load current version of all_sales.
+#Current revision file location
+crfl = r'FILE_NAME_WITHOUT_FILETYPE'
+#Last revision file type
+crft = '.csv'
+#Last revision file name
+crfn = crfl + crd + crft
+#Load data
+data = pd.read_csv(crfn, header=0)
+#Preview the first 5 lines to verify data loaded correctly.
+data.head()
 
-#Convert Time Format
-data=data.replace('6:00 - 6:59 AM','6')
-data=data.replace('7:00 - 7:59 AM','7')
-data=data.replace('8:00 - 8:59 AM','8')
-data=data.replace('9:00 - 9:59 AM','9')
-data=data.replace('10:00 - 10:59 AM','10')
-data=data.replace('11:00 - 11:59 AM','11')
-data=data.replace('12:00 - 12:59 PM','12')
-data=data.replace('1:00 - 1:59 PM','13')
-data=data.replace('2:00 - 2:59 PM','14')
-data=data.replace('3:00 - 3:59 PM','15')
-data=data.replace('4:00 - 4:59 PM','16')
-data=data.replace('5:00 - 5:59 PM','17')
-data=data.replace('6:00 - 6:59 PM','18')
-data=data.replace('7:00 - 7:59 PM','19')
-data=data.replace('8:00 - 8:59 PM','20')
-data=data.replace('9:00 - 9:59 PM','21')
-data=data.replace('10:00 - 10:59 PM','22')
-data=data.replace('11:00 - 11:59 PM','23')
-
-#Convert Time from string to number
-data['Time']=data['Time'].astype(int)
 
 #Drive Thru Subset
 dt_filter_list = ['DRIVE THRU', 'M-DRIVE-THRU']
@@ -33,11 +27,18 @@ dt = data[data.Destination.isin(dt_filter_list)]
 
 #Drive Thru Hourly Car Records
 dt_count = dt.groupby(['Date','Time'],as_index=False)['Count'].sum()
-dt_count_max = dt_count.groupby(['Time'])['Count'].max()
+dt_count_max_filter = dt_count.groupby(['Time'])['Count'].transform(max)==dt_count['Count']
+dt_count_max = dt_count[dt_count_max_filter]
+dt_count_max=dt_count_max.set_index('Time')
+
+#Remove duplicate car counts for same hour and keep the oldest date.
+dt_count_max = dt_count_max.loc[~dt_count_max.index.duplicated(keep='first')]
 
 #Drive Thru Hourly Sales Records
 dt_sales = dt.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
-dt_sales_max = dt_sales.groupby(['Time'])['Net Sales'].max()
+dt_sales_max_filter = dt_sales.groupby(['Time'])['Net Sales'].transform(max)==dt_sales['Net Sales']
+dt_sales_max = dt_sales[dt_sales_max_filter]
+dt_sales_max=dt_sales_max.set_index('Time')
 
 #Dine Subset
 dine_filter_list = ['DINE IN','M-DINEIN']
@@ -45,21 +46,43 @@ dine = data[data.Destination.isin(dine_filter_list)]
 
 #Dine Hourly Sales Records
 dine_sales = dine.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
-dine_sales_max = dine_sales.groupby(['Time'])['Net Sales'].max()
+dine_sales_max_filter = dine_sales.groupby(['Time'])['Net Sales'].transform(max)==dine_sales['Net Sales']
+dine_sales_max = dine_sales[dine_sales_max_filter]
+dine_sales_max = dine_sales_max.set_index('Time')
 
 #Overall Hour Records - No Catering (Catering creates inconsistencies from them
 #being pushed through at times other than when they went out.)
-overall_filter_list=['CARRY OUT', 'DRIVE THRU', 'DINE IN', 'M-CARRYOUT', 'M-DRIVE-THRU','M-DINEIN', 'M-OUTSIDE','ON DEMAND']
+overall_filter_list=['CARRY OUT', 'CFA-DELIVERY', 'DRIVE THRU', 'DINE IN', 'M-CARRYOUT', 'M-DRIVE-THRU','M-DINEIN', 'M-OUTSIDE','ON DEMAND']
 overall=data[data.Destination.isin(overall_filter_list)]
 overall_sales=overall.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
-overall_sales_max=overall_sales.groupby(['Time'])['Net Sales'].max()
+overall_sales_max_filter=overall_sales.groupby(['Time'])['Net Sales'].transform(max)==overall_sales['Net Sales']
+overall_sales_max=overall_sales[overall_sales_max_filter]
+overall_sales_max = overall_sales_max.set_index('Time')
 
 #Overall Hour Records With Catering
 total=data.groupby(['Date','Time'],as_index=False)['Net Sales'].sum()
-total_max=total.groupby(['Time'])['Net Sales'].max()
+total_max_filter=total.groupby(['Time'])['Net Sales'].transform(max)==total['Net Sales']
+total_max=total[total_max_filter]
+total_max = total_max.set_index('Time')
 
 #Combine all records into one set.
-all_records=pd.concat([dine_sales_max,dt_count_max,dt_sales_max,overall_sales_max,total_max], axis=1).reset_index()
+all_records=pd.merge(dine_sales_max,dt_count_max, left_index=True, right_index=True)
+all_records=pd.merge(all_records,dt_sales_max, left_index=True, right_index=True)
+all_records=pd.merge(all_records,overall_sales_max, left_index=True, right_index=True)
+all_records=pd.merge(all_records,total_max, left_index=True, right_index=True)
 
 #Create unique column names in all_records
-all_records.columns=['Time','Dine','Car Count', 'DT Sales', 'Overall (No Catering)', 'Overall']
+all_records.columns=['Date_Dine','Dine','Date_Count','Car_Count','Date_DT_Sales','DT_Sales','Date_Overall(NC)','Overall(No_Catering)','Date_Overall','Overall']
+
+#Drop closed hours
+all_records = all_records.drop(1)
+all_records = all_records.drop(2)
+all_records = all_records.drop(3)
+all_records = all_records.drop(4)
+all_records = all_records.drop(5)
+all_records = all_records.drop(22)
+all_records = all_records.drop(23)
+all_records = all_records.drop(24)
+
+#Create table
+all_records.style.background_gradient()
