@@ -86,3 +86,13 @@ all_records = all_records.drop(24)
 
 #Create table
 all_records.style.background_gradient()
+
+#Save Vesion of Records
+#File location
+nfl = r'FILE_NAME_WITHOUT_FILETYPE'
+#Last revision file type
+nft = '.csv'
+#Last revision file name
+nfn = nfl + crd + nft
+#Save all_records to csv
+all_records.to_csv(nfn, index=True)
