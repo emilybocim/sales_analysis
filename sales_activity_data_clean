@@ -1,10 +1,41 @@
+#ONLY CHANGE LINES 6 AND 9 BEFORE RUNNING. (Exception is if file locations change, then update lines 19 and 29.)
+
+#Inputs
+
+#Last revision end date. Format 'mm_dd_yyyy'. 
+lrd = '06_27_2020'
+
+#Current revision end date. Format 'mm_dd_yyyy'.
+crd = '08_01_2020'
+
 #Load Packages
 import pandas as pd
 import numpy as np
 import csv
 
-# Change file to online location once notebook is functional
-data = pd.read_csv(r"C:\Users\eboci_000\Desktop\Sales Activity\Sales\new_sales_4_25_2020.csv", header=0)
+#Find the last version of all_sales.
+
+#Last revision file location
+lrfl = r'FILE_LOCATION_WITHOUT_FILETYPE'
+
+#Last revision file type
+lrft = '.csv'
+
+#Last revision file name
+lrfn = lrfl + lrd + lrft
+
+#Find the the current new_sales.
+#New data file location
+crfl = r'FILE_LOCATION_WITHOUT_FILETYPE'
+
+#Last revision file type
+crft = '.csv'
+
+#Last revision file name
+crfn = crfl + crd + crft
+
+# Load data
+data = pd.read_csv(crfn, header=0)
 data.head()
 
 # Delete empty columns
@@ -33,27 +64,80 @@ data['Time'] = data['Time'].fillna(method='ffill')
 data.head()
 
 # Make all destination vaiables single row names
-
 data['Destination'] = data['Destination'].astype(str)
 data['Destination'] = data['Destination'].replace('M-','M-CARRYOUT')
 data['Destination'] = data['Destination'].replace('M-DRIVE-','M-DRIVE-THRU')
+data['Destination'] = data['Destination'].replace('CFA ','CFA-DELIVERY')
 
 
 #Remove rows with 'Sub Total'
-
 data = data[data.Destination != 'Sub Total']
-
 data.head(10)
+
+#Convert Time Format (Allows for treating time as a simple numeric)
+data=data.replace('12:00 - 12:59 AM', '24')
+data=data.replace('1:00 - 1:59 AM', '1')
+data=data.replace('2:00 - 2:59 AM', '2')
+data=data.replace('3:00 - 3:59 AM', '3')
+data=data.replace('4:00 - 4:59 AM', '4')
+data=data.replace('5:00 - 5:59 AM','5')
+data=data.replace('6:00 - 6:59 AM','6')
+data=data.replace('7:00 - 7:59 AM','7')
+data=data.replace('8:00 - 8:59 AM','8')
+data=data.replace('9:00 - 9:59 AM','9')
+data=data.replace('10:00 - 10:59 AM','10')
+data=data.replace('11:00 - 11:59 AM','11')
+data=data.replace('12:00 - 12:59 PM','12')
+data=data.replace('1:00 - 1:59 PM','13')
+data=data.replace('2:00 - 2:59 PM','14')
+data=data.replace('3:00 - 3:59 PM','15')
+data=data.replace('4:00 - 4:59 PM','16')
+data=data.replace('5:00 - 5:59 PM','17')
+data=data.replace('6:00 - 6:59 PM','18')
+data=data.replace('7:00 - 7:59 PM','19')
+data=data.replace('8:00 - 8:59 PM','20')
+data=data.replace('9:00 - 9:59 PM','21')
+data=data.replace('10:00 - 10:59 PM','22')
+data=data.replace('11:00 - 11:59 PM','23')
+data['Time'] = pd.to_numeric(data['Time'])
+
+#Count to Numeric
+data['Count'] = pd.to_numeric(data['Count'])
+
+#Net Sales to Numeric
+#Remove Commas
+data['Net Sales'] = data ['Net Sales'].str.replace(',','')
+#Convert Negatives from (#) to -#
+data['Net Sales'] = data ['Net Sales'].str.replace('(','-')
+data['Net Sales'] = data ['Net Sales'].str.replace(')','')
+data['Net Sales']= pd.to_numeric(data['Net Sales'])
+
+#Check Average
+#Remove commas so that can convert to numeric
+data['Check Average'] = data ['Check Average'].str.replace(',','')
+#Convert negatives from (#) to -#
+data['Check Average'] = data ['Check Average'].str.replace('(','-')
+data['Check Average'] = data ['Check Average'].str.replace(')','')
+data['Check Average']= pd.to_numeric(data['Check Average'])
+
+#Date
+data['Date'] = pd.to_datetime(data['Date'])
+
+#Verify Changes
+data.dtypes
 
 # Combine new data with old data
     # Must not have a file already named this or there will be an error
     
 # Load previous data
-old_data = pd.read_csv(r"C:/Users/eboci_000/Desktop/Sales Activity/Sales/all_sales_4_18_2020.csv", header=0)
+old_data = old_data = pd.read_csv(lrfn, header=0)
 
 # Vertical Concatenation
 current_sales_activity = pd.concat([old_data, data], axis=0)
 current_sales_activity.head()
 
+
 # Save the data with a filename that includes the last date of data added
-current_sales_activity.to_csv('C:/Users/eboci_000/Desktop/Sales Activity/Sales/all_sales_4_25_2020.csv', index=False)
+# Updated all_sales file name.
+uas = lrfl + crd + lrft
+current_sales_activity.to_csv(uas, index=False)
